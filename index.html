@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Tracker</title>
+
+  <!-- CDN Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- App Styles -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Header -->
+<header class="app-header">
+  <div class="logo">
+    <div class="logo-icon">AT</div>
+    <input type="text" id="dashTitle" value="" onchange="curDash().title=this.value;saveDash(meta.currentDashId);renderNav()" spellcheck="false"
+      style="font-family:var(--font-mono);font-size:17px;font-weight:600;background:transparent;border:1px solid transparent;color:var(--text-primary);padding:4px 8px;border-radius:var(--radius);width:500px;max-width:50vw;cursor:text"
+      onfocus="this.style.borderColor='var(--border-focus)';this.style.background='var(--bg-input)'"
+      onblur="this.style.borderColor='transparent';this.style.background='transparent'">
+  </div>
+  <div class="header-actions">
+    <select class="btn btn-sm" id="fontSelect" onchange="setFont(this.value)" style="padding:4px 8px;font-size:11px">
+      <option value="'DM Sans',sans-serif">DM Sans</option>
+      <option value="'Inter',sans-serif">Inter</option>
+      <option value="'Source Sans 3',sans-serif">Source Sans</option>
+      <option value="system-ui,sans-serif">System</option>
+    </select>
+    <select class="btn btn-sm" id="fontSizeSelect" onchange="setFontScale(this.value)" style="padding:4px 8px;font-size:11px">
+      <option value="0.9">Small</option>
+      <option value="1" selected>Medium</option>
+      <option value="1.1">Large</option>
+      <option value="1.2">XL</option>
+    </select>
+    <button class="btn btn-sm" id="themeToggle" onclick="toggleTheme()">☀ Light</button>
+  </div>
+</header>
+
+<!-- Navigation Bar -->
+<div class="nav-bar">
+  <label>Dashboard:</label>
+  <select id="dashSelect" onchange="switchDashboard(this.value)"></select>
+  <button class="btn btn-sm" onclick="createDashboard()">+ New</button>
+  <button class="btn btn-sm btn-danger" id="delDashBtn" onclick="deleteDashboard()">🗑</button>
+  <div class="nav-sep"></div>
+  <label>View:</label>
+  <select id="viewSelect" onchange="switchView(this.value)"></select>
+  <button class="btn btn-sm" onclick="createProject()">+ Project</button>
+  <button class="btn btn-sm btn-danger" id="delProjBtn" onclick="deleteProject()">🗑</button>
+  <div class="nav-sep"></div>
+  <button class="btn btn-sm" onclick="downloadTemplate()">⬇ CSV</button>
+  <label class="btn btn-sm btn-primary">📁 Import<input type="file" accept=".csv" onchange="handleCSVImport(event)" style="display:none"></label>
+  <div style="margin-left:auto;display:flex;gap:6px">
+    <button class="btn btn-sm" onclick="openBackupModal()">💾 Backup</button>
+    <label class="btn btn-sm">📂 Restore<input type="file" accept=".json" onchange="importJSON(event)" style="display:none"></label>
+    <button class="btn btn-sm" onclick="exportPDF()">📄 PDF</button>
+  </div>
+</div>
+
+<!-- Main Content -->
+<main class="app-main">
+  <div id="mainContent"></div>
+</main>
+
+<!-- ═══════ MODALS ═══════ -->
+
+<!-- Confirm Modal -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal">
+    <h3 id="confirmTitle">Confirm</h3>
+    <p id="confirmMsg" style="color:var(--text-secondary);margin-bottom:16px"></p>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('confirmModal')">Cancel</button>
+      <button class="btn btn-danger" id="confirmAction">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Link TC to Requirement Modal -->
+<div class="modal-overlay" id="linkModal">
+  <div class="modal">
+    <h3>Link Test Cases</h3>
+    <p style="color:var(--text-secondary);margin-bottom:12px" id="linkReqLabel"></p>
+    <select id="linkTcSelect" style="width:100%;font-family:var(--font-sans);font-size:13px;padding:8px 10px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary)"></select>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('linkModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmLink()">Link</button>
+    </div>
+  </div>
+</div>
+
+<!-- TC Detail Modal -->
+<div class="modal-overlay" id="tcModal">
+  <div class="modal modal-lg" id="tcModalContent"></div>
+</div>
+
+<!-- Backup Scope Modal -->
+<div class="modal-overlay" id="backupModal">
+  <div class="modal">
+    <h3>Backup JSON</h3>
+    <p style="color:var(--text-secondary);margin-bottom:16px">Choose scope:</p>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <button class="btn" onclick="exportDashJSON();closeModal('backupModal')">📊 Entire Dashboard (all projects)</button>
+      <button class="btn" id="backupProjBtn" onclick="exportProjJSON();closeModal('backupModal')">📁 Current Project Only</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('backupModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Test Case Modal -->
+<div class="modal-overlay" id="addTcModal">
+  <div class="modal">
+    <h3>Add Test Case</h3>
+    <div class="tc-modal-field"><label>TC ID</label><input id="atc_id" placeholder="TC-001"></div>
+    <div class="tc-modal-row">
+      <div class="tc-modal-field"><label>Scenario</label><input id="atc_scenario"></div>
+      <div class="tc-modal-field"><label>Validation Area</label><input id="atc_area"></div>
+    </div>
+    <div class="tc-modal-field"><label>Expected Results</label><input id="atc_expected"></div>
+    <div class="tc-modal-row">
+      <div class="tc-modal-field"><label>Type</label>
+        <select id="atc_type"><option>Smoke</option><option>Functional</option><option>Integrated</option><option>E2E</option></select>
+      </div>
+      <div class="tc-modal-field"><label>Priority</label>
+        <select id="atc_priority"><option>Critical</option><option>High</option><option selected>Medium</option><option>Low</option></select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('addTcModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmAddTc()">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- Log Defect Modal -->
+<div class="modal-overlay" id="defectModal">
+  <div class="modal">
+    <h3>Log Defect</h3>
+    <div class="tc-modal-field"><label>Defect ID</label><input id="df_id" placeholder="DEF-001"></div>
+    <div class="tc-modal-field"><label>Title</label><input id="df_title"></div>
+    <div class="tc-modal-row">
+      <div class="tc-modal-field"><label>Severity</label>
+        <select id="df_sev"><option>Critical</option><option>High</option><option selected>Medium</option><option>Low</option></select>
+      </div>
+      <div class="tc-modal-field"><label>External Ref (Jira, ADO, etc.)</label><input id="df_ref" placeholder="JIRA-1234"></div>
+    </div>
+    <div class="tc-modal-field"><label>Description</label><textarea id="df_desc" style="min-height:60px"></textarea></div>
+    <input type="hidden" id="df_tcid">
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('defectModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmAddDefect()">Log Defect</button>
+    </div>
+  </div>
+</div>
+
+<!-- Defect View/Edit Modal -->
+<div class="modal-overlay" id="defectViewModal">
+  <div class="modal modal-lg" id="defectViewContent"></div>
+</div>
+
+<!-- ═══════ SCRIPTS (order matters) ═══════ -->
+<script src="js/constants.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/render.js"></script>
+<script src="js/export.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>
