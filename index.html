@@ -26,7 +26,10 @@
 <header class="app-header">
   <div class="logo">
     <div class="logo-icon">AT</div>
-    <input type="text" id="dashTitle" class="dash-title-input" value="" onchange="curDash().title=this.value;saveDash(meta.currentDashId);renderNav()" spellcheck="false">
+    <input type="text" id="dashTitle" value="" onchange="curDash().title=this.value;saveDash(meta.currentDashId);renderNav()" spellcheck="false"
+      style="font-family:var(--font-mono);font-size:17px;font-weight:600;background:transparent;border:1px solid transparent;color:var(--text-primary);padding:4px 8px;border-radius:var(--radius);width:500px;max-width:50vw;cursor:text"
+      onfocus="this.style.borderColor='var(--border-focus)';this.style.background='var(--bg-input)'"
+      onblur="this.style.borderColor='transparent';this.style.background='transparent'">
   </div>
   <div class="header-actions">
     <select class="btn btn-sm" id="fontSelect" onchange="setFont(this.value)" style="padding:4px 8px;font-size:11px">
@@ -59,7 +62,7 @@
   <div class="nav-sep"></div>
   <button class="btn btn-sm" onclick="downloadTemplate()">⬇ CSV</button>
   <label class="btn btn-sm btn-primary">📁 Import<input type="file" accept=".csv" onchange="handleCSVImport(event)" style="display:none"></label>
-  <div class="nav-actions">
+  <div style="margin-left:auto;display:flex;gap:6px">
     <button class="btn btn-sm" onclick="openBackupModal()">💾 Backup</button>
     <label class="btn btn-sm">📂 Restore<input type="file" accept=".json" onchange="importJSON(event)" style="display:none"></label>
     <button class="btn btn-sm" onclick="exportPDF()">📄 PDF</button>
